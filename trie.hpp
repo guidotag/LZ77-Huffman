@@ -1,3 +1,9 @@
+// A trie with public internal representation. This is done in order to allow the
+// compression routine traverse over the trie.
+// 
+// Author: Guido Tagliavini Ponce
+// Date: 03/01/2015
+
 #ifndef __TRIE_HPP__
 #define __TRIE_HPP__
 
@@ -38,7 +44,8 @@ struct trie {
 		}
 
 		erase(key, i + 1, node->children[key[i]]);
-			
+		
+		// See if we can delete the node
 		if (node->children[key[i]]->children.size() == 0
 			&& node->children[key[i]]->position == -1) {
 			delete node->children[key[i]];

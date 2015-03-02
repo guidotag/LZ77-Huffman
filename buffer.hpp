@@ -1,3 +1,15 @@
+// Behaves as a FIFO queue, but allows random access to any element.
+// The structure's size is fixed at construction, and every element is
+// initialized with the type's default value.
+// The only two supported operations are element accesing and insertion.
+// Accessing the i-th element means accessing the i-th most recently inserted
+// element. We can think that each element we insert is put at the
+// front, getting the lowest index, and the last element drops off the
+// structure.
+
+// Author: Guido Tagliavini Ponce
+// Date: 03/01/2015
+
 #ifndef __BUFFER_HPP__
 #define __BUFFER_HPP__
 
@@ -7,15 +19,6 @@ using std::vector;
 
 template<class T>
 class buffer {
-	// Behaves as a FIFO queue, but allows random access to any element.
-	// The structure's size is fixed at construction, and every element is
-	// initialized with the type's default value.
-	// The only two supported operations are element accesing and insertion.
-	// Accessing the i-th element means accessing the i-th most recently inserted
-	// element. We can think that each element we insert is put at the
-	// front, getting the lowest index, and the last element drops off the
-	// structure.
-
 public:
 	buffer<T> (int size) : array(size){
 		next = size - 1;
