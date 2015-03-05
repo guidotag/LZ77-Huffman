@@ -78,7 +78,7 @@ map<char, string> huffman (istream &in) {
 	string empty;
 	traverse(pq.top().tr, empty, codes);
 
-	// TODO delete the trie
+	delete pq.top().tr;
 
 	return codes;
 }
