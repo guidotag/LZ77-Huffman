@@ -1,20 +1,4 @@
-#include <iostream>
-#include <list>
-#include <map>
-#include "trie.hpp"
-#include "buffer.hpp"
-
-using std::istream;
-using std::ostream;
-using std::list;
-using std::map;
-using std::max;
-
-struct token {
-	int distance;
-	int length;
-	char character;
-};
+#include "lz77.hpp"
 
 void encode (istream &in, int w, ostream &out) {
 	trie<int> root;
@@ -32,6 +16,7 @@ void encode (istream &in, int w, ostream &out) {
 			in.get(current);
 			// We peek to turn on the eof bit in case that we've reached the end
 			in.peek();
+
 			term.push_back(current);
 			if (node->children.count(current) == 0 			// We don't have this character defined yet
 				|| node->children[current]->value == NULL 	// The character is defined, but we don't have that term 
@@ -53,7 +38,7 @@ void encode (istream &in, int w, ostream &out) {
 			node->insert(current, pos);
 		} else {
 			// The character existed in the tree so we just set the term's position
-			*(node->children[current]->value) = pos;
+			node->children[current]->value = new int(pos);
 		}
 
 		insertions.push_back(term);

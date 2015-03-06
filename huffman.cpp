@@ -1,41 +1,22 @@
-#include <queue>
-#include <vector>
-#include <istream>
-#include "trie.hpp"
+#include "huffman.hpp"
 
-using std::priority_queue;
-using std::vector;
-using std::istream;
-
-struct tnode {
-	long long weight;
-	trie<char> *tr;
-};
-
-class comparator {
-public:
-	bool operator() (const tnode &a, const tnode &b) const {
-		return a.weight > b.weight;
-	}
-};
-
-void traverse (trie<char> *node, string &path, map<char, string> &codes) {
+void traverse (trie<char> *node, code &path, map<char, code> &codes) {
 	if (node->children.size() == 0) {
 		// It's a leaf
-		codes[*(node->value)] = string(path);
+		codes[*(node->value)] = code(path);
 		return;
 	}
 
 	// By construction, the node must have two children '0' and '1'
-	path.push_back('0');
+	path.push_back(bit(0));
 	traverse(node->children['0'], path, codes);
 	path.pop_back();
-	path.push_back('1');
+	path.push_back(bit(1));
 	traverse(node->children['1'], path, codes);
 	path.pop_back();
 }
 
-map<char, string> huffman (istream &in) {
+map<char, code> huffman (istream &in) {
 	map<char, long long> freqs;
 	char current;
 
@@ -74,8 +55,8 @@ map<char, string> huffman (istream &in) {
 		pq.push(join);
 	}
 
-	map<char, string> codes;
-	string empty;
+	map<char, code> codes;
+	code empty;
 	traverse(pq.top().tr, empty, codes);
 
 	delete pq.top().tr;

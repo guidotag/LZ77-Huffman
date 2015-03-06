@@ -20,7 +20,7 @@ public:
 		value = NULL;
 	}
 
-	trie (T value) {
+	trie (const T &value) {
 		this->value = new T(value);
 	}
 
@@ -38,12 +38,12 @@ public:
 		if (value != NULL) delete value;
 	}
 
-	void insert (char c, T value) {
-		children[c] = new trie(value);
+	void insert (char c, T &value) {
+		children[c] = new trie<T>(value);
 	}
 
 	// Deletes all the path for key[i..n], but leaving the current node.
-	void erase (string &key, int i, trie *node) {
+	void erase (string &key, int i, trie<T> *node) {
 		int n = key.size();
 		
 		if (i == n) {
@@ -66,7 +66,7 @@ public:
 		erase(key, 0, this);
 	}
 
-	map<char, trie *> children;
+	map<char, trie<T> *> children;
 	T *value;
 };
 
