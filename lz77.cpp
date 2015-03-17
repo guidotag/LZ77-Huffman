@@ -53,17 +53,17 @@ void encode (istream &in, int w, ostream &out) {
 			window -= key.size();
 		}
 
-		if(in.eof()) break;
+		if (in.eof()) break;
 	}
 }
 
 token next_token (istream &in) {
 	token tok;
-	in.ignore(1, '#');
+	in.seekg(1, ios_base::cur);	// #
 	in >> tok.distance;
-	in.ignore(1, '|');
+	in.seekg(1, ios_base::cur);	// |
 	in >> tok.length;
-	in.ignore(1, '|');
+	in.seekg(1, ios_base::cur);	// |
 	in >> tok.character;
 	return tok;
 }
@@ -71,13 +71,17 @@ token next_token (istream &in) {
 void decode (istream &in, int w, ostream &out) {
 	buffer<char> buff(max(1, w));
 
-	while (!in.eof()) {
-		token tok = next_token(in);
+	while (true) {
 		in.peek();
+		if (in.eof()) break;
+
+		token tok = next_token(in);
+
 		for (int j = 0; j < tok.length; j++) {
 			out << buff[tok.distance - 1];
 			buff.insert(buff[tok.distance - 1]);
 		}
+
 		out << tok.character;
 		buff.insert(tok.character);
 	}

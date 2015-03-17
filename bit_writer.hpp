@@ -8,7 +8,7 @@ using std::ostream;
 
 class bit_writer {
 public:
-	bit_writer (ostream &_out) : out(_out){
+	bit_writer (ostream &_out) : out(_out) {
 		count = 0;
 		clear();
 	}
@@ -38,7 +38,7 @@ public:
 
 	void flush () {
 		if (count > 0) {
-			out.put(pack(buffer));
+			out << pack(buffer);
 		}
 
 		clear();

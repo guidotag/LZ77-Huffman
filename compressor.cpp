@@ -61,7 +61,7 @@ void test_lz77_filestream (const string &path, int w) {
 	encoded.close();
 	encoded.open("encoded.txt", fstream::in);
 	noskipws(encoded);
-	fstream decoded("decoded.txt", fstream::out);
+	fstream decoded("decoded.txt", fstream::out | fstream::trunc);
 	decode(encoded, w, decoded);
 
 	encoded.close();
@@ -104,6 +104,8 @@ void write_code (code &c, bit_writer &writer) {
 void write_dictionary (map<char, code> &codes, ostream &out) {
 	bit_writer writer(out);
 
+	writer.write_char(codes.size());
+
 	map<char, code>::iterator it = codes.begin();
 	while (it != codes.end()) {
 		// Write the character
@@ -115,9 +117,37 @@ void write_dictionary (map<char, code> &codes, ostream &out) {
 
 		it++;
 	}
+
+	writer.flush();
 }
 
-void huffmanize (istream &in, map<char, code> &codes, ostream &out) {
+map<code, char> read_dictionary (istream &in) {
+	map<code, char> inverted;
+	bit_reader reader(in);
+
+	unsigned char size = reader.read_char();
+
+	for (int i = 0; i < size; i++) {
+		char character = reader.read_char();
+		unsigned char len = (unsigned char)reader.read_char();
+		code c(len);
+		for (int j = 0; j < len; j++) {
+			c[j] = reader.read_bit();
+		}
+
+		inverted[c] = character;
+	}
+
+	return inverted;
+}
+
+void huffmanize (istream &in, ostream &out) {
+	map<char, code> codes = huffman(in);
+	write_dictionary(codes, out);
+
+	in.clear();
+	in.seekg(0, ios_base::beg);
+
 	bit_writer writer(out);
 
 	char current;
@@ -125,29 +155,55 @@ void huffmanize (istream &in, map<char, code> &codes, ostream &out) {
 		code c = codes[current];
 		write_code(c, writer);
 	}
+
+	writer.flush();
 }
+
+void dehuffmanize (istream &in, ostream &out) {
+	map<code, char> inverted = read_dictionary(in);
+	bit_reader reader(in);
+
+	while (true) {
+		reader.peek();
+		if (reader.eof()) break;
+		
+		code current;
+		while (true) {
+			current.push_back(reader.read_bit());
+			if (inverted.count(current) > 0) {
+				out << inverted[current];
+				break;
+			}
+		}
+	}
+}
+
 
 void compress (ifstream &in, int w, ofstream &out) {
-	fstream lz77("lz77.tmp", fstream::out | fstream::trunc);
-	encode(in, w, lz77);
+	fstream temp("compression.tmp", fstream::out | fstream::trunc);
+	noskipws(temp);
 
-	lz77.close();
-	lz77.open("lz77.tmp", fstream::in);
+	encode(in, w, temp);
 
-	map<char, code> codes = huffman(lz77);
+	temp.close();
+	temp.open("compression.tmp", fstream::in);
 
-	write_dictionary(codes, out);
+	huffmanize(temp, out);
 
-	lz77.clear();
-	lz77.seekg(0, ios::beg);
-
-	huffmanize(lz77, codes, out);
-
-	remove("lz77.tmp");
+	remove("compression.tmp");
 }
 
-void uncompress (ifstream &in, int w, ofstream &out) {
-	
+void decompress (ifstream &in, int w, ofstream &out) {
+	fstream temp("decompression.tmp", fstream::out | fstream::trunc);
+	noskipws(temp);
+
+	dehuffmanize(in, temp);
+
+	temp.close();
+	temp.open("decompression.tmp", fstream::in);
+	decode(temp, w, out);
+
+	remove("decompression.tmp");
 }
 
 void print_help() {
@@ -156,7 +212,7 @@ void print_help() {
 
 int main (int argc, char *argv[]) {
 	// test_lz77_stringstream("ABBAABBBABAABABBABBBABAABBABBABABAABAB", 10);
-	// test_lz77_filestream("data/book.txt", 1 << 2);
+	// test_lz77_filestream("data/joke.txt", 1 << 2);
 	// test_huffman_stringstream("Example string. The vowels should have much shorter codes than the consonants.");
 
 	if (argc != 3) {
@@ -168,12 +224,25 @@ int main (int argc, char *argv[]) {
 	int w = atoi(argv[2]);
 
 	ifstream in(path, fstream::in);
-	ofstream out(path + ".cps", fstream::trunc);
+	ofstream out(path + ".cps", fstream::out | fstream::trunc);
+
+	noskipws(in);
 
 	compress(in, w, out);
 
 	system(string("du -k " + path).c_str());
 	system(string("du -k " + path + ".cps").c_str());
+
+	in.close();
+	out.close();
+
+	in.open(path + ".cps", fstream::in);
+	out.open(path + "_uncompressed", fstream::out | fstream::trunc);
+
+	decompress(in, w, out);
+
+	in.close();
+	out.close();
 
 	return 0;
 }
