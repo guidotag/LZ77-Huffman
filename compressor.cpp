@@ -2,6 +2,8 @@
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <getopt.h>
+#include <unistd.h>
 #include "lz77.hpp"
 #include "huffman.hpp"
 #include "bit_writer.hpp"
@@ -24,6 +26,8 @@ using std::map;
 
 // TODO
 // - Implement dictionary as a hash table. We could use unorderered_map.
+
+const char *program_name;
 
 void test_lz77_stringstream (const string &text, int w) {
 	// The text should have no whitespaces (spaces, end lines, etc.)
@@ -183,6 +187,7 @@ void compress (ifstream &in, int w, ofstream &out) {
 	fstream temp("compression.tmp", fstream::out | fstream::trunc);
 	noskipws(temp);
 
+	temp << w;
 	encode(in, w, temp);
 
 	temp.close();
@@ -193,7 +198,7 @@ void compress (ifstream &in, int w, ofstream &out) {
 	remove("compression.tmp");
 }
 
-void decompress (ifstream &in, int w, ofstream &out) {
+void decompress (ifstream &in, ofstream &out) {
 	fstream temp("decompression.tmp", fstream::out | fstream::trunc);
 	noskipws(temp);
 
@@ -201,13 +206,61 @@ void decompress (ifstream &in, int w, ofstream &out) {
 
 	temp.close();
 	temp.open("decompression.tmp", fstream::in);
+
+	int w;
+	temp >> w;
 	decode(temp, w, out);
 
 	remove("decompression.tmp");
 }
 
-void print_help() {
+string directory (const string &path) {
+	int n = path.size();
+	for (int i = n - 1; i >= 0; i--) {
+		if (path[i] == '/') {
+			return path.substr(0, i);
+		}
+	}
 
+	return path;
+}
+
+string drop_extension (const string &path) {
+	int n = path.size();
+	for (int i = n - 1; i >= 0; i--) {
+		if (path[i] == '/') {
+			return path;		// No extension
+		}
+		if (path[i] == '.') {
+			return path.substr(0, i);
+		}
+	}
+
+	return path;
+}
+
+string filename (const string &path) {
+	int n = path.size();
+	for (int i = n - 1; i >= 0; i--) {
+		if (path[i] == '/') {
+			return path.substr(i + 1, n - i);
+		}
+	}
+
+	return path;
+}
+
+void print_help() {
+	printf("Usage:\n");
+	printf("\t%s <options> <file>\n", program_name);
+	printf("The available options are:\n");
+	printf("\t-h, -help\n\t\tPrints help information\n");
+	printf("\t-c, -compress <window>\n\t\tCompresses the specified file using a dictionary of size at most window.\n");
+	printf("\t-d, -decompress\n\t\tDecompresses the specified file.\n");
+	printf("If no option is specified, a decompression is performed.\n");
+	printf("Example call:\n");
+	printf("\t%s -c 100000 data/book.txt\n", program_name);
+	printf("\t%s -d data/book.txt.lzh\n", program_name);
 }
 
 int main (int argc, char *argv[]) {
@@ -215,34 +268,71 @@ int main (int argc, char *argv[]) {
 	// test_lz77_filestream("data/joke.txt", 1 << 2);
 	// test_huffman_stringstream("Example string. The vowels should have much shorter codes than the consonants.");
 
-	if (argc != 3) {
+	program_name = argv[0];
+
+	const char* const optstring = "hc:d";
+
+	const struct option longops[] = {
+		{"help", 0, NULL, 'h'},
+		{"compress", 1, NULL, 'c'},
+		{"decompress", 0, NULL, 'd'},
+		{NULL, 0, NULL, 0}
+	};
+
+	if (argc < 3) {
 		print_help();
 		exit(EXIT_SUCCESS);
 	}
 
-	string path(argv[1]);
-	int w = atoi(argv[2]);
+	int w;
+	char operation;
 
-	ifstream in(path, fstream::in);
-	ofstream out(path + ".cps", fstream::out | fstream::trunc);
+	while(1){
+		int next_opt = getopt_long(argc, argv, optstring, longops, NULL);
+		
+		if(next_opt == -1){
+			break;
+		}
+		
+		switch(next_opt){
+			case 'h':
+				print_help();
+				exit(EXIT_SUCCESS);
+			case 'c':
+				w = atoi(optarg);
+				operation = 'c';
+				break;
+			case 'd':
+				operation = 'd';
+				break;
+			default:
+				abort();
+		}
+	}
 
-	noskipws(in);
+	string path(argv[argc - 1]);
 
-	compress(in, w, out);
+	if (operation == 'c') {
+		ifstream in(path, fstream::in);
+		ofstream out(path + ".lzh", fstream::out | fstream::trunc);
+		noskipws(in);
 
-	system(string("du -k " + path).c_str());
-	system(string("du -k " + path + ".cps").c_str());
+		compress(in, w, out);
+	
+		in.close();
+		out.close();
+	} else {
+		system(string("mkdir " + directory(path) + "/decompressed").c_str());
 
-	in.close();
-	out.close();
+		ifstream in(path, fstream::in);
+		ofstream out(directory(path) + "/decompressed/" + drop_extension(filename(path)), fstream::out | fstream::trunc);
+		noskipws(in);
 
-	in.open(path + ".cps", fstream::in);
-	out.open(path + "_uncompressed", fstream::out | fstream::trunc);
-
-	decompress(in, w, out);
-
-	in.close();
-	out.close();
+		decompress(in, out);
+	
+		in.close();
+		out.close();
+	}
 
 	return 0;
 }

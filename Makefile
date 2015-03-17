@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -O2 -Wall -std=c++0x -pedantic
 
-BIN = compress
+BIN = lzh
 OBJS = compressor.o lz77.o huffman.o bit.o
 
 .PHONY: clean
