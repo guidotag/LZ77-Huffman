@@ -10,21 +10,22 @@
 using std::priority_queue;
 using std::vector;
 using std::istream;
+using std::char_traits;
 
 typedef vector<bit> code;
 
-struct tnode {
+struct weighted_trie {
 	long long weight;
-	trie<char> *tr;
+	trie<int> *root;
 };
 
 class comparator {
 public:
-	bool operator() (const tnode &a, const tnode &b) const {
+	bool operator() (const weighted_trie &a, const weighted_trie &b) const {
 		return a.weight > b.weight;
 	}
 };
 
-map<char, code> huffman (istream &in);
+map<int, code> huffman (istream &in);
 
 #endif

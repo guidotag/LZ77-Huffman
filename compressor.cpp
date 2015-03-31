@@ -23,9 +23,7 @@ using std::ifstream;
 using std::ofstream;
 using std::stringstream;
 using std::map;
-
-// TODO
-// - Implement dictionary as a hash table. We could use unorderered_map.
+using std::char_traits;
 
 const char *program_name;
 
@@ -90,8 +88,8 @@ void test_huffman_stringstream (const string &text) {
 
 	input << text;
 
-	map<char, code> codes = huffman(input);
-	map<char, code>::iterator it = codes.begin();
+	map<int, code> codes = huffman(input);
+	map<int, code>::iterator it = codes.begin();
 	while (it != codes.end()) {
 		cout << it->first << ": " << it->second << endl;
 		it++;
@@ -105,15 +103,15 @@ void write_code (code &c, bit_writer &writer) {
 	}
 }
 
-void write_dictionary (map<char, code> &codes, ostream &out) {
+void write_dictionary (map<int, code> &codes, ostream &out) {
 	bit_writer writer(out);
 
-	writer.write_char(codes.size());
+	writer.write_int(codes.size());
 
-	map<char, code>::iterator it = codes.begin();
+	map<int, code>::iterator it = codes.begin();
 	while (it != codes.end()) {
 		// Write the character
-		writer.write_char(it->first);
+		writer.write_int(it->first);
 		// Write the code length
 		writer.write_char((char)it->second.size());
 		// Write the code
@@ -125,15 +123,15 @@ void write_dictionary (map<char, code> &codes, ostream &out) {
 	writer.flush();
 }
 
-map<code, char> read_dictionary (istream &in) {
-	map<code, char> inverted;
+map<code, int> read_dictionary (istream &in) {
+	map<code, int> inverted;
 	bit_reader reader(in);
 
-	unsigned char size = reader.read_char();
+	int size = reader.read_int();
 
 	for (int i = 0; i < size; i++) {
-		char character = reader.read_char();
-		unsigned char len = (unsigned char)reader.read_char();
+		int character = reader.read_int();
+		unsigned char len = reader.read_char();
 		code c(len);
 		for (int j = 0; j < len; j++) {
 			c[j] = reader.read_bit();
@@ -146,7 +144,7 @@ map<code, char> read_dictionary (istream &in) {
 }
 
 void huffmanize (istream &in, ostream &out) {
-	map<char, code> codes = huffman(in);
+	map<int, code> codes = huffman(in);
 	write_dictionary(codes, out);
 
 	in.clear();
@@ -156,42 +154,42 @@ void huffmanize (istream &in, ostream &out) {
 
 	char current;
 	while (in >> current) {
-		code c = codes[current];
+		code c = codes[char_traits<char>::to_int_type(current)];
 		write_code(c, writer);
 	}
+
+	write_code(codes[char_traits<char>::eof()], writer);
 
 	writer.flush();
 }
 
 void dehuffmanize (istream &in, ostream &out) {
-	map<code, char> inverted = read_dictionary(in);
+	map<code, int> inverted = read_dictionary(in);
 	bit_reader reader(in);
 
 	while (true) {
-		reader.peek();
-		if (reader.eof()) break;
-		
 		code current;
 		while (true) {
 			current.push_back(reader.read_bit());
 			if (inverted.count(current) > 0) {
-				out << inverted[current];
+// cout << inverted[current] << endl;
+				if (inverted[current] == char_traits<char>::eof()) return;
+				out << char_traits<char>::to_char_type(inverted[current]);
 				break;
 			}
 		}
 	}
 }
 
-
 void compress (ifstream &in, int w, ofstream &out) {
 	fstream temp("compression.tmp", fstream::out | fstream::trunc);
-	noskipws(temp);
 
 	temp << w;
 	encode(in, w, temp);
 
 	temp.close();
 	temp.open("compression.tmp", fstream::in);
+	noskipws(temp);
 
 	huffmanize(temp, out);
 
@@ -200,12 +198,12 @@ void compress (ifstream &in, int w, ofstream &out) {
 
 void decompress (ifstream &in, ofstream &out) {
 	fstream temp("decompression.tmp", fstream::out | fstream::trunc);
-	noskipws(temp);
 
 	dehuffmanize(in, temp);
 
 	temp.close();
 	temp.open("decompression.tmp", fstream::in);
+	noskipws(temp);
 
 	int w;
 	temp >> w;
@@ -254,11 +252,11 @@ void print_help() {
 	printf("Usage:\n");
 	printf("\t%s <options> <file>\n", program_name);
 	printf("The available options are:\n");
-	printf("\t-h, -help\n\t\tPrints help information\n");
-	printf("\t-c, -compress <window>\n\t\tCompresses the specified file using a dictionary of size at most window.\n");
+	printf("\t-h, -help\n\t\tPrints help information.\n");
+	printf("\t-c, -compress <window>\n\t\tCompresses the specified file using a dictionary of size given by window.\n");
 	printf("\t-d, -decompress\n\t\tDecompresses the specified file.\n");
 	printf("If no option is specified, a decompression is performed.\n");
-	printf("Example call:\n");
+	printf("Example calls:\n");
 	printf("\t%s -c 100000 data/book.txt\n", program_name);
 	printf("\t%s -d data/book.txt.lzh\n", program_name);
 }

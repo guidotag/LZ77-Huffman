@@ -36,6 +36,13 @@ public:
 		}
 	}
 
+	void write_int (int i) {
+		for (int k = 0; k < 4; k++) {
+			char c = *((char *)(&i) + k);
+			write_char(c);
+		}
+	}
+
 	void flush () {
 		if (count > 0) {
 			out << pack(buffer);

@@ -10,14 +10,18 @@ class bit_reader {
 public:
 	bit_reader (istream &_in) : in(_in){
 		remaining = 0;
+		eofbit = false;
 	}
 
 	bit read_bit () {
 		if (remaining == 0) {
-			char next;
-			in >> next;
-			unpack(next, buffer);
-			remaining = 8;
+			refill();
+		}
+
+		if (remaining == 0) {
+			// We couldn't refill the buffer, so we have reached the end of file.
+			eofbit = true;
+			return bit(-1);
 		}
 
 		bit ret = buffer[8 - remaining];
@@ -34,18 +38,50 @@ public:
 		return pack(array);
 	}
 
-	int peek() {
-		return in.peek();
+	int read_int () {
+		int ret = 0;
+		for (int k = 0; k < 4; k++) {
+			char c = read_char();
+			memcpy((char *)(&ret) + k, &c, 1);
+		}
+
+		return ret;
+	}
+
+	bit peek() {
+		if (remaining > 0){
+			return buffer[8 - remaining];
+		}
+
+		refill();
+
+		if (remaining == 0) {
+			eofbit = true;
+			return bit(-1);
+		}
+
+		return buffer[0];
 	}
 
 	bool eof(){
-		return in.eof();
+		return eofbit;
 	}
 
 private:
+	void refill () {
+		char next;
+		in >> next;
+
+		if (!in.eof()) {
+			unpack(next, buffer);
+			remaining = 8;
+		}
+	}
+
 	bit buffer[8];
 	int remaining;
 	istream &in;
+	bool eofbit;
 };
 
 #endif

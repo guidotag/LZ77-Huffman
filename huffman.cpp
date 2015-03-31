@@ -1,6 +1,6 @@
 #include "huffman.hpp"
 
-void traverse (trie<char> *node, code &path, map<char, code> &codes) {
+void traverse (trie<int> *node, code &path, map<int, code> &codes) {
 	if (node->children.size() == 0) {
 		// It's a leaf
 		codes[*(node->value)] = code(path);
@@ -16,7 +16,7 @@ void traverse (trie<char> *node, code &path, map<char, code> &codes) {
 	path.pop_back();
 }
 
-map<char, code> huffman (istream &in) {
+map<int, code> huffman (istream &in) {
 	map<char, long long> freqs;
 	char current;
 
@@ -26,11 +26,11 @@ map<char, code> huffman (istream &in) {
 
 	// Calculate weighted frequencies while we create one
 	// trie node per character.
-	priority_queue<tnode, vector<tnode>, comparator> pq;
+	priority_queue<weighted_trie, vector<weighted_trie>, comparator> pq;
 	map<char, long long>::iterator it = freqs.begin();
 	while (it != freqs.end()) {
-		tnode x;		// maybe we can allocate stack for this one
-		x.tr = new trie<char>(it->first);
+		weighted_trie x;
+		x.root = new trie<int>(char_traits<char>::to_int_type(it->first));
 		x.weight = it->second;
 
 		pq.push(x);
@@ -38,28 +38,34 @@ map<char, code> huffman (istream &in) {
 		it++;
 	}
 
+	// Add an EOF node.
+	weighted_trie x;
+	x.root = new trie<int>(char_traits<char>::eof());
+	x.weight = 1;
+	pq.push(x);
+
 	while (pq.size() > 1) {
-		tnode a, b;
+		weighted_trie a, b;
 		a = pq.top();
 		pq.pop();
 		b = pq.top();
 		pq.pop();
 
-		tnode join;
-		join.tr = new trie<char>();
-		join.tr->children['0'] = a.tr;
-		join.tr->children['1'] = b.tr;
+		weighted_trie join;
+		join.root = new trie<int>();
+		join.root->children['0'] = a.root;
+		join.root->children['1'] = b.root;
 
 		join.weight = a.weight + b.weight;
 
 		pq.push(join);
 	}
 
-	map<char, code> codes;
+	map<int, code> codes;
 	code empty;
-	traverse(pq.top().tr, empty, codes);
+	traverse(pq.top().root, empty, codes);
 
-	delete pq.top().tr;
+	delete pq.top().root;
 
 	return codes;
 }
