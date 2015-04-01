@@ -172,8 +172,7 @@ void dehuffmanize (istream &in, ostream &out) {
 		while (true) {
 			current.push_back(reader.read_bit());
 			if (inverted.count(current) > 0) {
-// cout << inverted[current] << endl;
-				if (inverted[current] == char_traits<char>::eof()) return;
+				if (char_traits<char>::eq_int_type(inverted[current], char_traits<char>::eof())) return;
 				out << char_traits<char>::to_char_type(inverted[current]);
 				break;
 			}
