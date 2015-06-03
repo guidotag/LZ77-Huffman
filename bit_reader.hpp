@@ -3,6 +3,7 @@
 
 #include "bit.hpp"
 #include <istream>
+#include <cstring>
 
 using std::istream;
 
