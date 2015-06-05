@@ -1,13 +1,13 @@
 #include "lz77.hpp"
 
-void encode (istream &in, int w, ostream &out) {
+void encode (istream &in, wsize_t w, ostream &out) {
 	trie<int> root;
 	list<string> insertions;
 	int pos = 0;
 	int window = 0;
 
 	while (true) {
-		int i = 0;
+		wsize_t i = 0;
 		char current;
 		string term;
 		trie<int> *node = &root;
@@ -22,9 +22,15 @@ void encode (istream &in, int w, ostream &out) {
 				|| node->children[current]->value == NULL 	// The character is defined, but we don't have that term 
 				|| in.eof()) {								// The term is in the dictionary, but we've reached the end
 				if (i == 0) {
-					out << "#0|0|" << current;
+					wsize_t zero = 0;
+					out.write((char *)(&zero), sizeof(wsize_t));
+					out.write((char *)(&zero), sizeof(wsize_t));
+					out << current;
 				} else {
-					out << "#" << (pos - *(node->value)) << "|" << i << "|" << current;
+					wsize_t dist = (wsize_t)(pos - *(node->value));
+					out.write((char *)(&dist), sizeof(wsize_t));
+					out.write((char *)(&i), sizeof(wsize_t));
+					out << current;
 				}
 				break;
 			} else {
@@ -43,8 +49,8 @@ void encode (istream &in, int w, ostream &out) {
 
 		insertions.push_back(term);
 
-		pos += i + 1;
-		window += i + 1;
+		pos += i; pos++;
+		window += i; window++;
 
 		while (window > w) {
 			string key = insertions.front();
@@ -59,17 +65,16 @@ void encode (istream &in, int w, ostream &out) {
 
 token next_token (istream &in) {
 	token tok;
-	in.seekg(1, ios_base::cur);	// #
-	in >> tok.distance;
-	in.seekg(1, ios_base::cur);	// |
-	in >> tok.length;
-	in.seekg(1, ios_base::cur);	// |
+
+	in.read((char *)(&tok.distance), sizeof(wsize_t));
+	in.read((char *)(&tok.length), sizeof(wsize_t));
 	in >> tok.character;
+
 	return tok;
 }
 
-void decode (istream &in, int w, ostream &out) {
-	buffer<char> buff(max(1, w));
+void decode (istream &in, wsize_t w, ostream &out) {
+	buffer<char> buff(max(1, (int)w));
 
 	while (true) {
 		in.peek();

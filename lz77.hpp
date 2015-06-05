@@ -14,13 +14,15 @@ using std::map;
 using std::max;
 using std::ios_base;
 
+typedef uint16_t wsize_t;
+
 struct token {
-	int distance;
-	int length;
+	wsize_t distance;
+	wsize_t length;
 	char character;
 };
 
-void encode (istream &in, int w, ostream &out);
-void decode (istream &in, int w, ostream &out);
+void encode (istream &in, wsize_t w, ostream &out);
+void decode (istream &in, wsize_t w, ostream &out);
 
 #endif

@@ -27,7 +27,7 @@ using std::char_traits;
 
 const char *program_name;
 
-void test_lz77_stringstream (const string &text, int w) {
+void test_lz77_stringstream (const string &text, wsize_t w) {
 	// The text should have no whitespaces (spaces, end lines, etc.)
 	cout << "Original text: " << text << endl;
 
@@ -52,7 +52,7 @@ void test_lz77_stringstream (const string &text, int w) {
 	cout << "Original text and decoded are equal? " << (dec == text) << endl;
 }
 
-void test_lz77_filestream (const string &path, int w) {
+void test_lz77_filestream (const string &path, wsize_t w) {
 	fstream input(path, fstream::in);
 	fstream encoded("encoded.txt", fstream::out | fstream::trunc);
 
@@ -180,7 +180,7 @@ void dehuffmanize (istream &in, ostream &out) {
 	}
 }
 
-void compress (ifstream &in, int w, ofstream &out) {
+void compress (ifstream &in, wsize_t w, ofstream &out) {
 	fstream temp("compression.tmp", fstream::out | fstream::trunc);
 
 	temp << w;
@@ -204,7 +204,7 @@ void decompress (ifstream &in, ofstream &out) {
 	temp.open("decompression.tmp", fstream::in);
 	noskipws(temp);
 
-	int w;
+	wsize_t w;
 	temp >> w;
 	decode(temp, w, out);
 
@@ -281,7 +281,7 @@ int main (int argc, char *argv[]) {
 		exit(EXIT_SUCCESS);
 	}
 
-	int w;
+	wsize_t w;
 	char operation;
 
 	while(1){
