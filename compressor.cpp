@@ -27,6 +27,30 @@ using std::char_traits;
 
 const char *program_name;
 
+/**
+ * Optimizations history:
+ *	1) LZ77 encoded every string as a tuple. Each tuple was stored with explicit
+ *		separators.
+ *	2) I realized the separators were not necessary since each of the components had
+ *		a fixed length. I was confused by the fact that after running Huffman, each
+ *		encoded character would have variable length, and didn't notice that despite 
+ *		of this variability, by the time that LZ77 had to decode, the text was already
+ *		Huffman-decoded.
+ *	3) It seems that the optimal dictionary size is roughly 64KB. Beyond that value,
+ *		it can be shown empirically that compression gets no better. This implies
+ *		that the distance and length components of LZ77's encoding output don't need
+ *		to be bigger than 2B.
+ *	4) The words are never too long, so we can fix the maximum word size as 255 characters.
+ *		Thus, we only need a 1B data type to store word lengths.
+ */
+
+ /**
+ * TODO optimizations:
+ *	1) Make the trie dictionary point to the insertions list so we can remove
+ *		elements faster from it.
+ *	2) Spend less than 1B storing word lengths.
+ */
+
 void test_lz77_stringstream (const string &text, wsize_t w) {
 	// The text should have no whitespaces (spaces, end lines, etc.)
 	cout << "Original text: " << text << endl;
@@ -252,7 +276,7 @@ void print_help() {
 	printf("\t%s <options> <file>\n", program_name);
 	printf("The available options are:\n");
 	printf("\t-h, -help\n\t\tPrints help information.\n");
-	printf("\t-c, -compress <window>\n\t\tCompresses the specified file using a dictionary of size given by window.\n");
+	printf("\t-c, -compress <window>\n\t\tCompresses the specified file using a dictionary of size given by window. The maximum window size admitted is 64KB.\n");
 	printf("\t-d, -decompress\n\t\tDecompresses the specified file.\n");
 	printf("If no option is specified, a decompression is performed.\n");
 	printf("Example calls:\n");

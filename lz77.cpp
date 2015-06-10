@@ -1,16 +1,18 @@
 #include "lz77.hpp"
 
+const int maximum_word_length = 1 << (8 * sizeof(lsize_t));
+
 void encode (istream &in, wsize_t w, ostream &out) {
-	trie<int> root;
+	trie<long long> root;
 	list<string> insertions;
-	int pos = 0;
+	long long pos = 0;
 	int window = 0;
 
 	while (true) {
-		wsize_t i = 0;
+		int i = 0;
 		char current;
 		string term;
-		trie<int> *node = &root;
+		trie<long long> *node = &root;
 
 		while (true) {
 			in.get(current);
@@ -20,31 +22,40 @@ void encode (istream &in, wsize_t w, ostream &out) {
 			term.push_back(current);
 			if (node->children.count(current) == 0 			// We don't have this character defined yet
 				|| node->children[current]->value == NULL 	// The character is defined, but we don't have that term 
-				|| in.eof()) {								// The term is in the dictionary, but we've reached the end
+				|| in.eof()									// We've reached the end
+				|| i == maximum_word_length - 1) {			// We have reached the maximum word length
+
 				if (i == 0) {
-					wsize_t zero = 0;
+					int zero = 0;
 					out.write((char *)(&zero), sizeof(wsize_t));
-					out.write((char *)(&zero), sizeof(wsize_t));
+					out.write((char *)(&zero), sizeof(lsize_t));
 					out << current;
 				} else {
 					wsize_t dist = (wsize_t)(pos - *(node->value));
+					lsize_t length = (lsize_t)i;
 					out.write((char *)(&dist), sizeof(wsize_t));
-					out.write((char *)(&i), sizeof(wsize_t));
+					out.write((char *)(&length), sizeof(lsize_t));
 					out << current;
 				}
+
+				if (node->children.count(current) == 0) {
+					// The character was not defined so we add a new node
+					node->insert(current, pos);
+				} else {
+					// The character existed in the tree so we just set the term's position
+					if (node->children[current]->value != NULL) {
+						// If we already had the term, we delete it first
+						delete node->children[current]->value;
+						insertions.remove(term);
+					}
+					node->children[current]->value = new long long(pos);
+				}
+
 				break;
 			} else {
 				node = node->children[current];
 				i++;
 			}
-		}
-
-		if (node->children.count(current) == 0) {
-			// The character was not defined so we add a new node
-			node->insert(current, pos);
-		} else {
-			// The character existed in the tree so we just set the term's position
-			node->children[current]->value = new int(pos);
 		}
 
 		insertions.push_back(term);
@@ -67,7 +78,7 @@ token next_token (istream &in) {
 	token tok;
 
 	in.read((char *)(&tok.distance), sizeof(wsize_t));
-	in.read((char *)(&tok.length), sizeof(wsize_t));
+	in.read((char *)(&tok.length), sizeof(lsize_t));
 	in >> tok.character;
 
 	return tok;
